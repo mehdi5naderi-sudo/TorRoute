@@ -1,0 +1,4 @@
+# Selected domains go through Tor.
+# Examples:
+# tgju.org
+# *.tgju.org
