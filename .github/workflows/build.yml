@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -15,7 +18,10 @@ jobs:
       - name: Locate and load MSVC
         shell: cmd
         run: |
-          for /f "usebackq delims=" %%i in (`"%ProgramFiles%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSROOT=%%i"
+          for /f "usebackq tokens=*" %%i in (`where vswhere`) do set "VSWHERE=%%i"
+          if not defined VSWHERE set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+          if not exist "%VSWHERE%" exit /b 1
+          for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSROOT=%%i"
           if not defined VSROOT exit /b 1
           call "%VSROOT%\VC\Auxiliary\Build\vcvars64.bat"
           where cl
@@ -35,3 +41,11 @@ jobs:
           name: TorRoute-Windows-x64
           path: TorRoute-Windows-x64.zip
           retention-days: 30
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.1.$env:GITHUB_RUN_NUMBER"
+          gh release create $tag TorRoute-Windows-x64.zip --title "TorRoute $tag" --generate-notes
