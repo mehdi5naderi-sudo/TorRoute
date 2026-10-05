@@ -1,0 +1,3 @@
+# Local HTTP proxy and Tor SOCKS5 endpoint
+listen=127.0.0.1:18080
+tor=127.0.0.1:9050
