@@ -11,17 +11,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Build with MSVC
+
+      - name: Locate and load MSVC
         shell: cmd
         run: |
-          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          for /f "usebackq delims=" %%i in (`"%ProgramFiles%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSROOT=%%i"
+          if not defined VSROOT exit /b 1
+          call "%VSROOT%\VC\Auxiliary\Build\vcvars64.bat"
+          where cl
           cl /nologo /O2 /EHsc /std:c++17 TorRoute.cpp ws2_32.lib wininet.lib /Fe:TorRoute.exe
+          if errorlevel 1 exit /b 1
+
       - name: Package
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item TorRoute.exe, rules.txt, config.txt, README.md dist/
           Compress-Archive -Path dist/* -DestinationPath TorRoute-Windows-x64.zip -Force
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
