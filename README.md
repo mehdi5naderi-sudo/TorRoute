@@ -1,13 +1,71 @@
 # TorRoute
 
-Portable Windows user-mode proxy router.
+**Portable Windows user-mode proxy router**
 
-Commands: start, stop, status, add DOMAIN, remove DOMAIN, list.
+ابزاری سبک برای ویندوز که به شما اجازه می‌دهد دامنه‌های انتخاب‌شده از طریق پراکسی SOCKS5 تور عبور کنند و سایر درخواست‌ها مستقیماً ارسال شوند.
 
-Tor must already be running on 127.0.0.1:9050.
+## قابلیت‌ها
 
-Selected domains are sent through Tor SOCKS5. Other requests are sent directly.
+- اجرا در سطح کاربر و بدون نیاز به دسترسی Administrator برای خود TorRoute
+- شروع، توقف و بررسی وضعیت پراکسی
+- افزودن و حذف دامنه‌ها از فهرست مسیریابی
+- ارسال درخواست‌های دامنه‌های انتخاب‌شده از طریق Tor SOCKS5
+- ارسال سایر درخواست‌ها به‌صورت مستقیم
+- طراحی قابل‌حمل؛ بدون نیاز به نصب یک درایور شبکه در سطح سیستم
 
-Limitation: this is a user-level HTTP proxy. Applications that ignore Windows/WinINET proxy settings or use raw sockets/UDP are not transparently intercepted. A true all-application transparent router normally needs WFP/WinDivert/TUN or process hooks and may require Administrator/driver access.
+## پیش‌نیاز
 
-No Administrator privilege is required by TorRoute itself.
+- ویندوز
+- اجرای Tor به‌صورت جداگانه
+- درگاه SOCKS5 تور در آدرس پیش‌فرض زیر در دسترس باشد:
+
+```
+127.0.0.1:9050
+```
+
+اگر Tor روی درگاه دیگری اجرا می‌شود، تنظیمات و فایل‌های پروژه را متناسب با آن بررسی کنید.
+
+## فرمان‌ها
+
+رابط فرمان پروژه این عملیات را پشتیبانی می‌کند:
+
+| فرمان | کاربرد |
+|---|---|
+| `start` | شروع سرویس پراکسی |
+| `stop` | توقف سرویس پراکسی |
+| `status` | نمایش وضعیت |
+| `add DOMAIN` | افزودن دامنه به فهرست عبور از Tor |
+| `remove DOMAIN` | حذف دامنه از فهرست |
+| `list` | نمایش دامنه‌های انتخاب‌شده |
+
+نمونه‌ی قالب فرمان‌ها (نام فایل اجرایی یا اسکریپت را مطابق فایل‌های موجود در مخزن وارد کنید):
+
+```text
+start
+status
+add example.com
+list
+remove example.com
+stop
+```
+
+## محدودیت مهم
+
+TorRoute یک پراکسی در سطح کاربر است، نه یک تونل شفاف برای کل سیستم. فقط برنامه‌هایی از آن استفاده می‌کنند که پراکسی تنظیم‌شده‌ی ویندوز/WinINET را رعایت کنند. برنامه‌هایی که تنظیمات پراکسی را نادیده می‌گیرند یا از سوکت خام و UDP استفاده می‌کنند، لزوماً از Tor عبور نخواهند کرد.
+
+برای مسیریابی شفاف تمام ترافیک سیستم معمولاً به راهکارهایی مانند WFP، WinDivert، TUN یا قلاب‌گذاری فرایند نیاز است که ممکن است دسترسی Administrator یا نصب درایور بخواهند.
+
+## امنیت و حریم خصوصی
+
+- عبور یک درخواست از Tor به معنی ناشناس بودن کامل نیست.
+- اطلاعات ورود، کوکی‌ها و داده‌های حساس را فقط در وب‌سایت‌ها و برنامه‌های مورد اعتماد وارد کنید.
+- وضعیت اتصال Tor را جداگانه بررسی کنید؛ TorRoute جایگزین خود شبکه‌ی Tor نیست.
+- برای جلوگیری از نشت ترافیک، به این ابزار به‌عنوان Kill Switch یا VPN تمام‌سیستمی تکیه نکنید.
+
+## گزارش مشکل
+
+برای گزارش خطا یا پیشنهاد، از بخش **Issues** مخزن استفاده کنید.
+
+## مجوز
+
+مجوز متن‌باز مشخصی در این README اعلام نشده است. پیش از بازتوزیع یا استفاده‌ی مجدد از کد، شرایط مالک پروژه را بررسی کنید.
