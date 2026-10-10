@@ -44,5 +44,57 @@ static int removeRule(const std::string&d){auto x=normalizeDomain(d);std::ifstre
 static int start(){loadConfig();if(pidRunning()){std::cout<<"Already running.\n";return 0;}setProxy(true);STARTUPINFOA si{};si.cb=sizeof(si);PROCESS_INFORMATION pi{};char exe[MAX_PATH];GetModuleFileNameA(nullptr,exe,sizeof(exe));std::string c="\""+std::string(exe)+"\" run-server";std::vector<char>cc(c.begin(),c.end());cc.push_back(0);if(!CreateProcessA(nullptr,cc.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,nullptr,&si,&pi)){setProxy(false);throw std::runtime_error("Could not start proxy process");}CloseHandle(pi.hThread);CloseHandle(pi.hProcess);std::cout<<"Started on "<<g_listenHost<<":"<<g_listenPort<<"\n";return 0;}
 static int runServer(){loadConfig();writePid();WSADATA w;if(WSAStartup(MAKEWORD(2,2),&w)!=0)return 2;serverThread(nullptr);WSACleanup();DeleteFileA(PIDFILE);return 0;}
 static int stop(){if(!pidRunning()){std::cout<<"Not running.\n";if(GetFileAttributesA(BACKUP)!=INVALID_FILE_ATTRIBUTES)setProxy(false);return 0;}HANDLE h=OpenProcess(PROCESS_TERMINATE,FALSE,readPid());if(h){TerminateProcess(h,0);CloseHandle(h);}setProxy(false);std::cout<<"Stopped; Direct proxy settings restored.\n";return 0;}
-static void usage(){std::cout<<"TorRoute: start | stop | status | add DOMAIN | remove DOMAIN | list\n";}
-int main(int argc,char**argv){try{if(argc<2){usage();return 0;}std::string c=lower(argv[1]);if(c=="add"&&argc>2)return addRule(argv[2]);if((c=="remove"||c=="rm")&&argc>2)return removeRule(argv[2]);if(c=="list"){for(auto&r:rules())std::cout<<r<<"\n";return 0;}if(c=="start")return start();if(c=="run-server")return runServer();if(c=="stop")return stop();if(c=="status"){std::cout<<(pidRunning()?"RUNNING":"STOPPED")<<"\n";return 0;}usage();return 0;}catch(const std::exception&e){std::cerr<<"ERROR: "<<e.what()<<"\n";return 1;}}
+static void showStatus(){
+ loadConfig();
+ std::cout<<"\\n========== TorRoute status ==========\\n";
+ std::cout<<"Service: "<<(pidRunning()?"RUNNING":"STOPPED")<<"\\n";
+ std::cout<<"Local proxy: "<<g_listenHost<<":"<<g_listenPort<<"\\n";
+ std::cout<<"Tor SOCKS5 endpoint (configured): "<<g_torHost<<":"<<g_torPort<<"\\n";
+ HKEY k; DWORD enabled=0,type=0,size=sizeof(enabled); std::string proxy="<unavailable>";
+ if(RegOpenKeyExA(HKEY_CURRENT_USER,"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Internet Settings",0,KEY_QUERY_VALUE,&k)==ERROR_SUCCESS){
+  if(RegQueryValueExA(k,"ProxyEnable",nullptr,&type,(BYTE*)&enabled,&size)!=ERROR_SUCCESS)enabled=0;
+  proxy=regGet(k,"ProxyServer"); RegCloseKey(k);
+ }
+ std::cout<<"Windows Internet proxy: "<<(enabled?"ENABLED":"DISABLED")<<" ("<<proxy<<")\\n";
+ auto rr=rules(); std::cout<<"Tor-routed domains: "<<rr.size()<<"\\n";
+ std::cout<<"======================================\\n";
+}
+static void showRules(){auto rr=rules();if(rr.empty()){std::cout<<"No domains configured in rules.txt.\\n";return;}for(size_t i=0;i<rr.size();++i)std::cout<<" "<<(i+1)<<". "<<rr[i]<<"\\n";}
+static int interactiveMenu(){
+ std::string choice;
+ for(;;){
+  showStatus();
+  std::cout<<"\\nChoose an action:\\n"
+           <<"  1) Start TorRoute\\n"
+           <<"  2) Stop TorRoute\\n"
+           <<"  3) Refresh status\\n"
+           <<"  4) List routed domains\\n"
+           <<"  5) Add a domain\\n"
+           <<"  6) Remove a domain\\n"
+           <<"  0) Exit\\n"
+           <<"Selection: ";
+  if(!std::getline(std::cin,choice))return 0;
+  choice=trim(choice);
+  try{
+   if(choice=="1")start();
+   else if(choice=="2")stop();
+   else if(choice=="3")continue;
+   else if(choice=="4"){showRules();}
+   else if(choice=="5"||choice=="6"){
+    std::string domain;
+    std::cout<<"Domain (example.com or *.example.com): ";
+    if(!std::getline(std::cin,domain))return 0;
+    domain=normalizeDomain(domain);
+    if(domain.empty()){std::cout<<"No domain entered.\\n";}
+    else if(choice=="5"){addRule(domain);std::cout<<"Added (or already present): "<<domain<<"\\n";}
+    else {removeRule(domain);std::cout<<"Removed if present: "<<domain<<"\\n";}
+   }
+   else if(choice=="0")return 0;
+   else std::cout<<"Please choose one of the listed options.\\n";
+  }catch(const std::exception&e){std::cerr<<"ERROR: "<<e.what()<<"\\n";}
+  std::cout<<"\\nPress Enter to continue...";
+  std::string pause;if(!std::getline(std::cin,pause))return 0;
+ }
+}
+static void usage(){std::cout<<"TorRoute: run without arguments for the interactive menu, or use: start | stop | status | add DOMAIN | remove DOMAIN | list\\n";}
+int main(int argc,char**argv){try{if(argc<2)return interactiveMenu();std::string c=lower(argv[1]);if(c=="add"&&argc>2)return addRule(argv[2]);if((c=="remove"||c=="rm")&&argc>2)return removeRule(argv[2]);if(c=="list"){showRules();return 0;}if(c=="start")return start();if(c=="run-server")return runServer();if(c=="stop")return stop();if(c=="status"){showStatus();return 0;}usage();return 0;}catch(const std::exception&e){std::cerr<<"ERROR: "<<e.what()<<"\\n";return 1;}}
